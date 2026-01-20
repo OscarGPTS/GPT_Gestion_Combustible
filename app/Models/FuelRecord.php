@@ -16,16 +16,19 @@ class FuelRecord extends Model
         'project_id',
         'date',
         'return_date',
-        'shift',
+        'shift', // D/N (texto libre)
+        'np_text', // N/P (texto libre)
         'provider_client',
         'description',
         'destination',
         'initial_mileage',
         'final_mileage',
-        'liters',
+        'liters', // Consumo
         'fuel_price',
         'cost',
         'km_per_liter',
+        'gasoline_cost', // $ Gasolina
+        'diesel_cost', // $ Diesel
         'amount',
         'evidence',
     ];
@@ -39,6 +42,8 @@ class FuelRecord extends Model
         'fuel_price' => 'decimal:2',
         'cost' => 'decimal:2',
         'km_per_liter' => 'decimal:2',
+        'gasoline_cost' => 'decimal:2',
+        'diesel_cost' => 'decimal:2',
         'amount' => 'decimal:2',
         'evidence' => 'array',
     ];

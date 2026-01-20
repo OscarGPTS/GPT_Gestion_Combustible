@@ -25,8 +25,14 @@ class FuelRecordController extends Controller
         $vehicles = Vehicle::active()->orderBy('unit')->get();
         $drivers = Driver::active()->orderBy('name')->get();
         $projects = Project::active()->orderBy('name')->get();
+        $providers = FuelRecord::whereNotNull('provider_client')
+            ->where('provider_client', '<>', '')
+            ->select('provider_client')
+            ->distinct()
+            ->orderBy('provider_client')
+            ->pluck('provider_client');
 
-        return view('fuel_records.index', compact('fuelRecords', 'vehicles', 'drivers', 'projects'));
+        return view('fuel_records.index', compact('fuelRecords', 'vehicles', 'drivers', 'projects', 'providers'));
     }
 
     /**
@@ -35,6 +41,40 @@ class FuelRecordController extends Controller
     public function store(Request $request)
     {
         $data = $this->validateData($request);
+        
+        // Auto-create driver if driver_id is empty but driver_name is provided
+        if (empty($data['driver_id']) && $request->filled('driver_name')) {
+            $driverName = mb_strtoupper(trim($request->driver_name));
+            // Buscar case-insensitive para evitar duplicados
+            $driver = Driver::whereRaw('UPPER(name) = ?', [$driverName])->first();
+            if (!$driver) {
+                $driver = Driver::create([
+                    'name' => $driverName,
+                    'status' => 'active'
+                ]);
+            }
+            $data['driver_id'] = $driver->id;
+        }
+        
+        // Auto-create project if project_id is empty but project_name is provided
+        if (empty($data['project_id']) && $request->filled('project_name')) {
+            $projectName = mb_strtoupper(trim($request->project_name));
+            // Buscar case-insensitive para evitar duplicados
+            $project = Project::whereRaw('UPPER(name) = ?', [$projectName])->first();
+            if (!$project) {
+                $project = Project::create([
+                    'name' => $projectName,
+                    'status' => 'active'
+                ]);
+            }
+            $data['project_id'] = $project->id;
+        }
+
+        // Normalizar proveedor/cliente a mayúsculas para evitar duplicados por casing
+        $data['provider_client'] = $request->filled('provider_client')
+            ? mb_strtoupper(trim($request->provider_client))
+            : null;
+        
         $data['cost'] = $this->calculateCost($data['liters'], $data['fuel_price']);
         $data['evidence'] = $this->storeEvidence($request);
 
@@ -63,6 +103,40 @@ class FuelRecordController extends Controller
     public function update(Request $request, FuelRecord $fuelRecord)
     {
         $data = $this->validateData($request, $fuelRecord->id);
+        
+        // Auto-create driver if driver_id is empty but driver_name is provided
+        if (empty($data['driver_id']) && $request->filled('driver_name_edit')) {
+            $driverName = mb_strtoupper(trim($request->driver_name_edit));
+            // Buscar case-insensitive para evitar duplicados
+            $driver = Driver::whereRaw('UPPER(name) = ?', [$driverName])->first();
+            if (!$driver) {
+                $driver = Driver::create([
+                    'name' => $driverName,
+                    'status' => 'active'
+                ]);
+            }
+            $data['driver_id'] = $driver->id;
+        }
+        
+        // Auto-create project if project_id is empty but project_name is provided
+        if (empty($data['project_id']) && $request->filled('project_name_edit')) {
+            $projectName = mb_strtoupper(trim($request->project_name_edit));
+            // Buscar case-insensitive para evitar duplicados
+            $project = Project::whereRaw('UPPER(name) = ?', [$projectName])->first();
+            if (!$project) {
+                $project = Project::create([
+                    'name' => $projectName,
+                    'status' => 'active'
+                ]);
+            }
+            $data['project_id'] = $project->id;
+        }
+
+        // Normalizar proveedor/cliente a mayúsculas para evitar duplicados por casing
+        $data['provider_client'] = $request->filled('provider_client')
+            ? mb_strtoupper(trim($request->provider_client))
+            : null;
+        
         $data['cost'] = $this->calculateCost($data['liters'], $data['fuel_price']);
         $data['evidence'] = $this->storeEvidence($request, $fuelRecord->evidence ?? []);
 
@@ -88,18 +162,25 @@ class FuelRecordController extends Controller
     {
         return $request->validate([
             'vehicle_id' => ['required', 'exists:vehicles,id'],
-            'driver_id' => ['required', 'exists:drivers,id'],
+            'driver_id' => ['nullable', 'exists:drivers,id'],
+            'driver_name' => ['nullable', 'string', 'max:100'],
+            'driver_name_edit' => ['nullable', 'string', 'max:100'],
             'project_id' => ['nullable', 'exists:projects,id'],
+            'project_name' => ['nullable', 'string', 'max:120'],
+            'project_name_edit' => ['nullable', 'string', 'max:120'],
             'date' => ['required', 'date'],
             'return_date' => ['nullable', 'date', 'after_or_equal:date'],
-            'shift' => ['required', 'in:day,night'],
+            'shift' => ['nullable', 'string', 'max:50'], // D/N campo texto
+            'np_text' => ['nullable', 'string', 'max:100'], // N/P campo texto
             'provider_client' => ['nullable', 'string', 'max:120'],
             'description' => ['nullable', 'string'],
             'destination' => ['nullable', 'string', 'max:150'],
             'initial_mileage' => ['required', 'integer', 'min:0'],
             'final_mileage' => ['required', 'integer', 'gte:initial_mileage'],
-            'liters' => ['required', 'numeric', 'min:0'],
-            'fuel_price' => ['required', 'numeric', 'min:0'],
+            'liters' => ['required', 'numeric', 'min:0'], // Consumo
+            'fuel_price' => ['nullable', 'numeric', 'min:0'],
+            'gasoline_cost' => ['nullable', 'numeric', 'min:0'], // $ Gasolina
+            'diesel_cost' => ['nullable', 'numeric', 'min:0'], // $ Diesel
             'amount' => ['nullable', 'numeric', 'min:0'],
             'evidence.*' => ['nullable', 'image', 'max:4096'],
         ]);

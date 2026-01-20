@@ -6,14 +6,41 @@
 <div class="space-y-6">
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p class="mt-2 text-gray-600">Reporte general de movimientos de combustible</p>
-        </div>
-        <div class="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
-            <input type="month" id="monthFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" value="{{ date('Y-m') }}">
-            <input type="text" id="searchFilter" placeholder="Buscar..." class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
-            <button id="exportBtn" class="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition flex items-center gap-2">
+        <h1 class="text-3xl font-bold text-gray-900 mb-4">¡Hola {{ auth()->user()->name }}!</h1>
+
+        <div class="mt-4 md:mt-0 flex flex-col sm:flex-row items-center gap-2">
+            <div class="relative" style="height: 77px;">
+                <label class="block text-gray-700 text-xs mb-1">Mes/Año</label>
+                <button id="monthYearToggle" class="px-3 py-1.5 h-9 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500 flex items-center justify-between gap-2 min-w-[180px]">
+                    <span id="monthYearLabel">Todos</span>
+                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div id="monthYearPanel" class="absolute z-20 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg p-2 hidden">
+                    <div class="flex items-center justify-between mb-2">
+                        <button id="prevYearBtn" class="px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 rounded">«</button>
+                        <span id="currentYearLabel" class="text-gray-900 text-sm font-semibold"></span>
+                        <button id="nextYearBtn" class="px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 rounded">»</button>
+                    </div>
+                    <div class="grid grid-cols-3 gap-1.5">
+                        @php
+                            $monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+                        @endphp
+                        @foreach($monthNames as $idx => $label)
+                            <button class="monthBtn px-2 py-1.5 text-xs border border-gray-200 rounded hover:bg-gray-50" data-month="{{ $idx + 1 }}">{{ $label }}</button>
+                        @endforeach
+                    </div>
+                    <div class="mt-2 flex items-center justify-between">
+                        <button id="clearMonthYearBtn" class="px-2.5 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-800 rounded">Todos</button>
+                        <span class="text-[10px] text-gray-500">Selecciona mes y presiona Buscar</span>
+                    </div>
+                </div>
+                <input type="hidden" id="monthSelect" value="{{ request('month') }}">
+                <input type="hidden" id="yearSelect" value="{{ request('year') }}">
+            </div>
+            <input type="text" id="searchFilter" placeholder="Buscar..." value="{{ request('search') }}" class="px-3 py-1.5 h-9 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 w-48">
+            <button id="applyFiltersBtn" class="px-4 py-1.5 h-9 text-sm bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition">Buscar</button>
+            <button id="clearFiltersBtn" class="px-4 py-1.5 h-9 text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg transition">Limpiar</button>
+            <button id="exportBtn" class="px-4 py-1.5 h-9 text-sm bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                 </svg>
@@ -27,7 +54,7 @@
         <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-primary-600">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-gray-600 text-sm font-medium">Costo Total del Mes</p>
+                    <p class="text-gray-600 text-sm font-medium">Costo Total</p>
                     <p class="text-3xl font-bold text-gray-900 mt-2">
                         ${{ number_format($monthlyStats['total_cost'], 2) }}
                     </p>
@@ -96,7 +123,7 @@
                 <button role="tab" aria-selected="true" aria-controls="panel-records" 
                         class="tab-btn px-6 py-4 font-medium text-primary-600 border-b-2 border-primary-600 focus:outline-none transition"
                         data-tab="records">
-                    Reporte Mensual General
+                    Todos los Registros
                 </button>
                 <button role="tab" aria-selected="false" aria-controls="panel-performance" 
                         class="tab-btn px-6 py-4 font-medium text-gray-600 border-b-2 border-transparent hover:border-gray-300 focus:outline-none transition"
@@ -261,33 +288,133 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     });
 });
 
-// Filter functionality
-document.getElementById('monthFilter').addEventListener('change', function() {
-    location.href = `?month=${this.value}`;
+// Filter functionality (only on button click)
+document.getElementById('applyFiltersBtn').addEventListener('click', function() {
+    const month = document.getElementById('monthSelect').value;
+    const year = document.getElementById('yearSelect').value;
+    const search = document.getElementById('searchFilter').value;
+
+    const params = new URLSearchParams();
+    if (month) params.append('month', month);
+    if (year) params.append('year', year);
+    if (search) params.append('search', search);
+
+    const qs = params.toString();
+    location.href = qs ? `?${qs}` : location.pathname;
 });
 
-document.getElementById('searchFilter').addEventListener('change', function() {
-    if(this.value.trim()) {
-        location.href = `?search=${encodeURIComponent(this.value)}`;
-    }
+// Clear filters button
+document.getElementById('clearFiltersBtn').addEventListener('click', function() {
+    location.href = location.pathname;
 });
 
 // Export functionality
 document.getElementById('exportBtn').addEventListener('click', function() {
-    const month = document.getElementById('monthFilter').value;
+    const month = document.getElementById('monthSelect').value;
+    const year = document.getElementById('yearSelect').value;
     const search = document.getElementById('searchFilter').value;
-    
+
     let url = '{{ route("dashboard.export") }}';
     const params = new URLSearchParams();
-    
-    if (month) params.append('month', month);
+
+    // Build month (YYYY-MM) only if year and month selected
+    if (month && year) {
+        params.append('year', year);
+        params.append('month', month);
+    }
     if (search) params.append('search', search);
-    
+
     if (params.toString()) {
         url += '?' + params.toString();
     }
-    
+
     window.location.href = url;
 });
+
+// Month/Year picker widget
+(function() {
+    const toggle = document.getElementById('monthYearToggle');
+    const panel = document.getElementById('monthYearPanel');
+    const prev = document.getElementById('prevYearBtn');
+    const next = document.getElementById('nextYearBtn');
+    const yearLabel = document.getElementById('currentYearLabel');
+    const monthButtons = Array.from(document.querySelectorAll('.monthBtn'));
+    const clearBtn = document.getElementById('clearMonthYearBtn');
+    const hiddenMonth = document.getElementById('monthSelect');
+    const hiddenYear = document.getElementById('yearSelect');
+    const label = document.getElementById('monthYearLabel');
+
+    const initialYear = hiddenYear.value ? parseInt(hiddenYear.value, 10) : (new Date()).getFullYear();
+    let currentYear = initialYear;
+
+    function monthName(m) {
+        const names = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        return names[m-1];
+    }
+
+    function updateYearLabel() {
+        yearLabel.textContent = currentYear;
+    }
+
+    function updateSelectedLabel() {
+        if (hiddenMonth.value && hiddenYear.value) {
+            label.textContent = monthName(parseInt(hiddenMonth.value, 10)) + ' ' + hiddenYear.value;
+        } else {
+            label.textContent = 'Todos';
+        }
+        // highlight selected month
+        monthButtons.forEach(btn => {
+            const isSelected = hiddenMonth.value && (parseInt(btn.dataset.month, 10) === parseInt(hiddenMonth.value, 10)) && hiddenYear.value && (parseInt(hiddenYear.value, 10) === currentYear);
+            btn.classList.toggle('bg-primary-50', isSelected);
+            btn.classList.toggle('border-primary-400', isSelected);
+        });
+    }
+
+    // Initialize
+    updateYearLabel();
+    updateSelectedLabel();
+
+    // Toggle panel
+    toggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        panel.classList.toggle('hidden');
+    });
+
+    // Close when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!panel.classList.contains('hidden')) {
+            const within = panel.contains(e.target) || toggle.contains(e.target);
+            if (!within) panel.classList.add('hidden');
+        }
+    });
+
+    // Year navigation
+    prev.addEventListener('click', function() {
+        currentYear -= 1;
+        updateYearLabel();
+        updateSelectedLabel();
+    });
+    next.addEventListener('click', function() {
+        currentYear += 1;
+        updateYearLabel();
+        updateSelectedLabel();
+    });
+
+    // Month selection
+    monthButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            hiddenMonth.value = this.dataset.month;
+            hiddenYear.value = String(currentYear);
+            updateSelectedLabel();
+        });
+    });
+
+    // Clear selection
+    clearBtn.addEventListener('click', function() {
+        hiddenMonth.value = '';
+        hiddenYear.value = '';
+        updateSelectedLabel();
+    });
+})();
 </script>
 @endsection

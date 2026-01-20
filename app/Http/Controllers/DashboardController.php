@@ -19,15 +19,18 @@ class DashboardController extends Controller
     {
         $query = FuelRecord::with(['vehicle', 'driver', 'project']);
 
-        // Apply filters
-        if ($request->filled('month')) {
-            $date = \Carbon\Carbon::parse($request->month);
+        // Apply filters (default: show ALL records, filter only when user applies)
+        $year = $request->input('year');
+        $month = $request->input('month');
+        $monthCompound = $request->input('month_compound'); // support legacy YYYY-MM param if provided
+
+        if ($year && $month) {
+            $query->whereYear('date', (int)$year)
+                  ->whereMonth('date', (int)$month);
+        } elseif ($monthCompound) {
+            $date = \Carbon\Carbon::parse($monthCompound);
             $query->whereMonth('date', $date->month)
                   ->whereYear('date', $date->year);
-        } else {
-            // If no month filter, show current month
-            $query->whereMonth('date', now()->month)
-                  ->whereYear('date', now()->year);
         }
 
         if ($request->filled('search')) {
@@ -63,7 +66,13 @@ class DashboardController extends Controller
             ->with('currentPerformance', 'fuelType')
             ->get();
 
-        return view('dashboard.index', compact('fuelRecords', 'monthlyStats', 'vehicles'));
+        // Years available for filter (distinct years from records)
+        $years = FuelRecord::selectRaw('YEAR(date) as year')
+            ->distinct()
+            ->orderBy('year', 'desc')
+            ->pluck('year');
+
+        return view('dashboard.index', compact('fuelRecords', 'monthlyStats', 'vehicles', 'years'));
     }
 
     /**
@@ -98,6 +107,12 @@ class DashboardController extends Controller
     public function export(Request $request)
     {
         $month = $request->query('month');
+        $year = $request->query('year');
+        $monthNumber = $request->query('month');
+        // If year+month provided, build YYYY-MM for export
+        if ($year && $monthNumber) {
+            $month = sprintf('%04d-%02d', (int)$year, (int)$monthNumber);
+        }
         $search = $request->query('search');
 
         $filename = 'reporte_gasolina_' . ($month ?? now()->format('Y-m')) . '.xlsx';

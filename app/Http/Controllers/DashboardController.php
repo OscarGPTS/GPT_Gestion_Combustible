@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Exports\FuelRecordsExport;
+use App\Models\Driver;
 use App\Models\FuelRecord;
+use App\Models\Project;
 use App\Models\Vehicle;
 use App\Models\VehiclePerformance;
 use Illuminate\Http\Request;
@@ -47,17 +49,44 @@ class DashboardController extends Controller
             });
         }
 
-        $fuelRecords = $query->orderBy('date', 'desc')->get();
+        // Order by created_at desc to show latest first and paginate
+        $fuelRecords = $query->orderBy('created_at', 'desc')->paginate(30);
 
-        // Calculate statistics from the filtered records
+        // Calculate statistics from ALL filtered records (build same query for stats)
+        $statsQuery = FuelRecord::query();
+        
+        if ($year && $month) {
+            $statsQuery->whereYear('date', (int)$year)
+                      ->whereMonth('date', (int)$month);
+        } elseif ($monthCompound) {
+            $date = \Carbon\Carbon::parse($monthCompound);
+            $statsQuery->whereMonth('date', $date->month)
+                      ->whereYear('date', $date->year);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $statsQuery->where(function($q) use ($search) {
+                $q->where('folio', 'like', "%{$search}%")
+                  ->orWhereHas('vehicle', function($q) use ($search) {
+                      $q->where('unit', 'like', "%{$search}%")
+                        ->orWhere('plate', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('driver', function($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $allRecords = $statsQuery->get();
         $monthlyStats = [
-            'total_cost' => $fuelRecords->sum('cost'),
-            'total_liters' => $fuelRecords->sum('liters'),
-            'total_km' => $fuelRecords->sum(function($record) {
+            'total_cost' => $allRecords->sum('cost'),
+            'total_liters' => $allRecords->sum('liters'),
+            'total_km' => $allRecords->sum(function($record) {
                 return $record->final_mileage - $record->initial_mileage;
             }),
-            'avg_consumption' => $fuelRecords->count() > 0 
-                ? round($fuelRecords->avg('km_per_liter'), 2)
+            'avg_consumption' => $allRecords->count() > 0 
+                ? round($allRecords->avg('km_per_liter'), 2)
                 : 0,
         ];
 
@@ -72,7 +101,17 @@ class DashboardController extends Controller
             ->orderBy('year', 'desc')
             ->pluck('year');
 
-        return view('dashboard.index', compact('fuelRecords', 'monthlyStats', 'vehicles', 'years'));
+        // Get drivers, projects, and providers for the create modal
+        $drivers = Driver::orderBy('name')->get();
+        $projects = Project::orderBy('name')->get();
+        $providers = FuelRecord::whereNotNull('provider_client')
+            ->where('provider_client', '!=', '')
+            ->distinct()
+            ->pluck('provider_client')
+            ->sort()
+            ->values();
+
+        return view('dashboard.index', compact('fuelRecords', 'monthlyStats', 'vehicles', 'years', 'drivers', 'projects', 'providers'));
     }
 
     /**
@@ -115,7 +154,12 @@ class DashboardController extends Controller
         }
         $search = $request->query('search');
 
-        $filename = 'reporte_gasolina_' . ($month ?? now()->format('Y-m')) . '.xlsx';
+        // Build filename: CONS + MES (uppercase), include year for clarity
+        $monthForName = $month ?? now()->format('Y-m');
+        [$yy, $mm] = explode('-', $monthForName);
+        $monthNames = [1 => 'ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+        $monthLabel = $monthNames[(int)$mm] ?? strtoupper(date('F', mktime(0,0,0,(int)$mm,1)));
+        $filename = 'CONS ' . $monthLabel . ' ' . $yy . '.xlsx';
 
         return Excel::download(
             new FuelRecordsExport($month, $search),

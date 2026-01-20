@@ -3,7 +3,7 @@
         <div class="flex items-center justify-between">
             <!-- Logo and Brand -->
             <div class="flex items-center space-x-3">
-                <div class="h-12 w-12 flex items-center justify-center">
+                <div class="h-20 w-20 flex items-center justify-center">
                     <svg version="1.0" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
                         viewBox="0 0 162.9 66.2" style="enable-background:new 0 0 162.9 66.2;" xml:space="preserve">
                     <style type="text/css">
@@ -64,8 +64,7 @@
                     </svg>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-900">{{ config('app.name') }}</h1>
-                    <p class="text-xs text-gray-500">Sistema de Gestión de Combustible</p>
+                    <h1 class="text-2xl font-bold text-gray-900">Sistema de Gestión de Combustible</h1>
                 </div>
             </div>
 

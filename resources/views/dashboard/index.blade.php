@@ -135,6 +135,13 @@
                         data-tab="vehicles">
                     Vehículos
                 </button>
+                <div class="flex-1"></div>
+                <button type="button" onclick="openCreateModal()" class="px-6 py-4 font-medium text-white bg-primary-600 hover:bg-primary-700 transition rounded-t-lg ml-2 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Nuevo registro
+                </button>
             </div>
         </div>
 
@@ -177,6 +184,10 @@
                             @endforelse
                         </tbody>
                     </table>
+                </div>
+                <!-- Paginación -->
+                <div class="mt-4">
+                    {{ $fuelRecords->links() }}
                 </div>
             </div>
 
@@ -262,6 +273,170 @@
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Create Modal -->
+<div id="createModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-40 p-4">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">Nuevo movimiento</h2>
+                <p class="text-sm text-gray-500">Captura la salida y agrega evidencia.</p>
+            </div>
+            <button type="button" class="text-gray-500 hover:text-gray-700 text-2xl" onclick="closeModal('createModal')">&times;</button>
+        </div>
+        <form id="createForm" action="{{ route('fuel-records.store') }}" method="POST" enctype="multipart/form-data" class="px-6 py-5 space-y-4">
+            @csrf
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- 1. Unidad -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600">Unidad <span class="text-red-500">*</span></label>
+                    <select name="vehicle_id" class="mt-1 w-full rounded border-gray-300 px-3 py-2" required>
+                        <option value="" class="px-3 py-2">Selecciona</option>
+                        @foreach($vehicles as $vehicle)
+                            <option value="{{ $vehicle->id }}">{{ $vehicle->unit }} - {{ $vehicle->plate }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- 3. Fecha -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600">Fecha <span class="text-red-500">*</span></label>
+                    <input type="date" name="date" class="mt-1 w-full rounded border-gray-300" required>
+                </div>
+
+                <!-- 4. Regreso -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600">Regreso</label>
+                    <input type="date" name="return_date" class="mt-1 w-full rounded border-gray-300">
+                </div>
+
+                <!-- 5. Conductor -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600">Conductor <span class="text-red-500">*</span></label>
+                    <input type="text" name="driver_name" list="drivers-list" class="mt-1 w-full rounded border-gray-300 uppercase" placeholder="SELECCIONA O ESCRIBE NUEVO" required autocomplete="off">
+                    <datalist id="drivers-list">
+                        @foreach($drivers as $driver)
+                            <option value="{{ strtoupper($driver->name) }}" data-id="{{ $driver->id }}">
+                        @endforeach
+                    </datalist>
+                    <input type="hidden" name="driver_id" value="">
+                </div>
+
+                <!-- 6. D/N -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600">D/N</label>
+                    <input type="text" name="shift" class="mt-1 w-full rounded border-gray-300" placeholder="Ingrese D/N" maxlength="50">
+                </div>
+
+                <!-- 7. N/P -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600">N/P</label>
+                    <input type="text" name="np_text" class="mt-1 w-full rounded border-gray-300" placeholder="Ingrese N/P" maxlength="100">
+                </div>
+
+                <!-- 8. Proveedor o Cliente -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600">Proveedor o Cliente</label>
+                    <input type="text" name="provider_client" list="providers-list" class="mt-1 w-full rounded border-gray-300 uppercase" placeholder="SELECCIONA O ESCRIBE NUEVO" autocomplete="off">
+                    <datalist id="providers-list">
+                        @foreach($providers as $provider)
+                            <option value="{{ strtoupper($provider) }}">
+                        @endforeach
+                    </datalist>
+                </div>
+
+                <!-- 10. Destino -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600">Destino</label>
+                    <input type="text" name="destination" class="mt-1 w-full rounded border-gray-300" placeholder="Lugar de destino">
+                </div>
+
+                <!-- 11. Kilometraje inicial -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600">Kilometraje inicial <span class="text-red-500">*</span></label>
+                    <input type="number" name="initial_mileage" id="initial_mileage_create" class="mt-1 w-full rounded border-gray-300" required>
+                </div>
+
+                <!-- 12. Kilometraje final -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600">Kilometraje final <span class="text-red-500">*</span></label>
+                    <input type="number" name="final_mileage" id="final_mileage_create" class="mt-1 w-full rounded border-gray-300" required>
+                </div>
+
+                <!-- 13. Kilómetros recorridos -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600">Kilómetros recorridos</label>
+                    <input type="number" id="km_recorridos_create" class="mt-1 w-full rounded border-gray-300">
+                </div>
+
+                <!-- 14. Consumo (litros) -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600">Consumo (litros) <span class="text-red-500">*</span></label>
+                    <input type="number" step="0.01" name="liters" id="liters_create" class="mt-1 w-full rounded border-gray-300" required>
+                </div>
+
+                <!-- 15. Costo -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600">Costo</label>
+                    <input type="number" step="0.01" id="costo_create" class="mt-1 w-full rounded border-gray-300">
+                </div>
+
+                <!-- 16. Kilómetros por litro -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600">Kilómetros por litro</label>
+                    <input type="number" step="0.01" id="km_per_liter_create" class="mt-1 w-full rounded border-gray-300">
+                </div>
+
+                <!-- 17. $ Gasolina -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600">Gasolina</label>
+                    <div class="relative mt-1">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">$</span>
+                        <input type="number" step="0.01" name="gasoline_cost" id="gasoline_cost_create" class="w-full rounded border-gray-300 pl-7" placeholder="0.00">
+                    </div>
+                </div>
+
+                <!-- 18. $ Diesel -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600">Diesel</label>
+                    <div class="relative mt-1">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">$</span>
+                        <input type="number" step="0.01" name="diesel_cost" id="diesel_cost_create" class="w-full rounded border-gray-300 pl-7" placeholder="0.00">
+                    </div>
+                </div>
+
+                <!-- Proyecto -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600">Proyecto (opcional)</label>
+                    <input type="text" name="project_name" list="projects-list" class="mt-1 w-full rounded border-gray-300 uppercase" placeholder="SELECCIONA O ESCRIBE NUEVO" autocomplete="off">
+                    <datalist id="projects-list">
+                        @foreach($projects as $project)
+                            <option value="{{ strtoupper($project->name) }}" data-id="{{ $project->id }}">
+                        @endforeach
+                    </datalist>
+                    <input type="hidden" name="project_id" value="">
+                </div>
+            </div>
+
+            <!-- 9. Descripción -->
+            <div>
+                <label class="block text-xs font-semibold text-gray-600">Descripción</label>
+                <textarea name="description" rows="3" class="mt-1 w-full rounded border-gray-300 px-3 py-2" placeholder="Notas del movimiento"></textarea>
+            </div>
+
+            <!-- Evidencia -->
+            <div>
+                <label class="block text-xs font-semibold text-gray-600">Evidencia (imágenes)</label>
+                <input type="file" name="evidence[]" accept="image/*" multiple class="mt-1 w-full rounded border-gray-300">
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-2">
+                <button type="button" class="px-4 py-2 text-sm text-gray-600" onclick="closeModal('createModal')">Cancelar</button>
+                <button type="submit" class="px-4 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700">Guardar</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -416,5 +591,121 @@ document.getElementById('exportBtn').addEventListener('click', function() {
         updateSelectedLabel();
     });
 })();
+
+// Modal functions for fuel records
+function showModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+}
+
+function closeModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+function openCreateModal() {
+    document.getElementById('createForm').reset();
+    showModal('createModal');
+}
+
+// Initialize datalists and calculations for create form
+document.addEventListener('DOMContentLoaded', function() {
+    // Formulario de crear - Autocomplete para conductores y proyectos
+    const driverInput = document.querySelector('input[name="driver_name"]');
+    const driverIdInput = document.querySelector('#createForm input[name="driver_id"]');
+    const projectInput = document.querySelector('input[name="project_name"]');
+    const projectIdInput = document.querySelector('#createForm input[name="project_id"]');
+    const providerInput = document.querySelector('#createForm input[name="provider_client"]');
+    
+    if (driverInput) {
+        driverInput.addEventListener('input', function() {
+            this.value = this.value.toUpperCase();
+            
+            const options = document.querySelectorAll('#drivers-list option');
+            let found = false;
+            options.forEach(option => {
+                if (option.value.toUpperCase() === this.value.toUpperCase()) {
+                    driverIdInput.value = option.getAttribute('data-id');
+                    found = true;
+                }
+            });
+            if (!found) {
+                driverIdInput.value = '';
+            }
+        });
+    }
+
+    if (projectInput) {
+        projectInput.addEventListener('input', function() {
+            this.value = this.value.toUpperCase();
+            
+            const options = document.querySelectorAll('#projects-list option');
+            let found = false;
+            options.forEach(option => {
+                if (option.value.toUpperCase() === this.value.toUpperCase()) {
+                    projectIdInput.value = option.getAttribute('data-id');
+                    found = true;
+                }
+            });
+            if (!found) {
+                projectIdInput.value = '';
+            }
+        });
+    }
+
+    if (providerInput) {
+        providerInput.addEventListener('input', function() {
+            this.value = this.value.toUpperCase();
+        });
+    }
+
+    // Cálculos automáticos para formulario CREATE
+    function calcularCamposCreate() {
+        const inicialEl = document.getElementById('initial_mileage_create');
+        const finalEl = document.getElementById('final_mileage_create');
+        const litrosEl = document.getElementById('liters_create');
+        const gasolinaEl = document.getElementById('gasoline_cost_create');
+        const dieselEl = document.getElementById('diesel_cost_create');
+        const kmRecorridosEl = document.getElementById('km_recorridos_create');
+        const costoEl = document.getElementById('costo_create');
+        const kmPorLitroEl = document.getElementById('km_per_liter_create');
+
+        const inicial = parseFloat(inicialEl.value) || 0;
+        const final = parseFloat(finalEl.value) || 0;
+        const litros = parseFloat(litrosEl.value) || 0;
+        const gasolina = parseFloat(gasolinaEl.value) || 0;
+        const diesel = parseFloat(dieselEl.value) || 0;
+
+        // Kilómetros recorridos = final - inicial
+        const kmRecorridos = final - inicial;
+        kmRecorridosEl.value = kmRecorridos > 0 ? kmRecorridos.toFixed(2) : '';
+
+        // Costo total = gasolina + diesel
+        const costo = gasolina + diesel;
+        costoEl.value = costo > 0 ? costo.toFixed(2) : '';
+
+        // Kilómetros por litro = km recorridos / litros
+        if (litros > 0 && kmRecorridos > 0) {
+            const kmPorLitro = kmRecorridos / litros;
+            kmPorLitroEl.value = kmPorLitro.toFixed(2);
+        } else {
+            kmPorLitroEl.value = '';
+        }
+    }
+
+    // Agregar listeners a todos los campos que afectan los cálculos
+    ['initial_mileage_create', 'final_mileage_create', 'liters_create', 'gasoline_cost_create', 'diesel_cost_create'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('input', calcularCamposCreate);
+        }
+    });
+});
 </script>
 @endsection

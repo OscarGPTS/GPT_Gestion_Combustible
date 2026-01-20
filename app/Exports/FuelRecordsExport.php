@@ -6,6 +6,7 @@ use App\Models\FuelRecord;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 class FuelRecordsExport implements FromCollection, WithHeadings, WithStyles
 {
@@ -22,17 +23,19 @@ class FuelRecordsExport implements FromCollection, WithHeadings, WithStyles
     {
         $query = FuelRecord::with('vehicle', 'driver', 'project');
 
-        // Filtrar por mes si se proporciona
+        // Filtrar por mes si se proporciona (YYYY-MM)
         if ($this->month) {
-            $query->whereMonth('date', explode('-', $this->month)[1])
-                  ->whereYear('date', explode('-', $this->month)[0]);
+            [$year, $month] = explode('-', $this->month);
+            $query->whereYear('date', (int) $year)
+                  ->whereMonth('date', (int) $month);
         }
 
         // Filtrar por búsqueda
         if ($this->search) {
             $query->where(function ($q) {
                 $q->whereHas('vehicle', function ($v) {
-                    $v->where('unit', 'like', '%' . $this->search . '%');
+                    $v->where('unit', 'like', '%' . $this->search . '%')
+                      ->orWhere('plate', 'like', '%' . $this->search . '%');
                 })
                 ->orWhereHas('driver', function ($d) {
                     $d->where('name', 'like', '%' . $this->search . '%');
@@ -41,21 +44,26 @@ class FuelRecordsExport implements FromCollection, WithHeadings, WithStyles
             });
         }
 
-        return $query->get()->map(function ($record) {
+        return $query->orderBy('date', 'desc')->get()->map(function ($record) {
             return [
                 'Folio' => $record->folio,
-                'Unidad' => $record->vehicle->unit,
-                'Fecha' => $record->date->format('d/m/Y'),
-                'Conductor' => $record->driver->name,
-                'KM Iniciales' => $record->initial_mileage,
-                'KM Finales' => $record->final_mileage,
-                'KM Recorridos' => $record->mileage_traveled,
-                'Litros' => number_format($record->liters, 2),
-                'Precio/Litro' => number_format($record->fuel_price ?? 0, 2),
-                'Costo Total' => number_format($record->cost, 2),
-                'KM/L' => number_format($record->km_per_liter, 2),
-                'Destino' => $record->destination ?? '-',
-                'Descripción' => $record->description ?? '-',
+                'Unidad' => $record->vehicle->unit ?? '-',
+                'Fecha' => optional($record->date)->format('d/m/Y'),
+                'Regreso' => optional($record->return_date)->format('d/m/Y'),
+                'Conductor' => $record->driver->name ?? '-',
+                'D/N' => $record->shift,
+                'N/P' => $record->np_text,
+                'Proveedor o Cliente' => $record->provider_client,
+                'Descripción' => $record->description,
+                'Destino' => $record->destination,
+                'Kilometraje inicial' => $record->initial_mileage,
+                'Kilometraje final' => $record->final_mileage,
+                'Kilómetros recorridos' => $record->mileage_traveled,
+                'Consumo' => number_format($record->liters ?? 0, 2),
+                'Costo' => number_format($record->cost ?? 0, 2),
+                'Kilómetros por litro' => number_format($record->km_per_liter ?? 0, 2),
+                '$ Gasolina' => number_format($record->gasoline_cost ?? 0, 2),
+                '$ Diesel' => number_format($record->diesel_cost ?? 0, 2),
             ];
         });
     }
@@ -66,16 +74,21 @@ class FuelRecordsExport implements FromCollection, WithHeadings, WithStyles
             'Folio',
             'Unidad',
             'Fecha',
+            'Regreso',
             'Conductor',
-            'KM Iniciales',
-            'KM Finales',
-            'KM Recorridos',
-            'Litros',
-            'Precio/Litro',
-            'Costo Total',
-            'KM/L',
-            'Destino',
+            'D/N',
+            'N/P',
+            'Proveedor o Cliente',
             'Descripción',
+            'Destino',
+            'Kilometraje inicial',
+            'Kilometraje final',
+            'Kilómetros recorridos',
+            'Consumo',
+            'Costo',
+            'Kilómetros por litro',
+            '$ Gasolina',
+            '$ Diesel',
         ];
     }
 
@@ -85,11 +98,11 @@ class FuelRecordsExport implements FromCollection, WithHeadings, WithStyles
             1 => [
                 'font' => [
                     'bold' => true,
-                    'color' => ['rgb' => 'FFFFFF'],
+                    'color' => ['rgb' => '000000'],
                 ],
                 'fill' => [
-                    'fillType' => 'solid',
-                    'startColor' => ['rgb' => 'DC2626'], // Rojo corporativo
+                    'fillType' => Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => 'FFE699'], // Amarillo
                 ],
             ],
         ];

@@ -10,7 +10,7 @@
             <h1 class="text-3xl font-bold text-gray-900">Vehículos</h1>
             <p class="mt-2 text-gray-600">Gestión de unidades de transporte</p>
         </div>
-        <button onclick="openModal()" class="mt-4 md:mt-0 px-6 py-2 bg-gradient-to-r from-primary-600 to-accent-500 text-white rounded-lg hover:shadow-lg transition font-medium">
+        <button onclick="openModal()" class="inline-flex items-center px-4 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg shadow hover:bg-primary-700 transition">
             <svg class="inline-block h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
@@ -138,7 +138,7 @@
                 <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition">
                     Cancelar
                 </button>
-                <button type="submit" class="flex-1 px-4 py-2 bg-gradient-to-r from-primary-600 to-accent-500 text-white rounded-lg font-medium hover:shadow-lg transition">
+                <button type="submit" class="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:shadow-lg transition">
                     Guardar
                 </button>
             </div>

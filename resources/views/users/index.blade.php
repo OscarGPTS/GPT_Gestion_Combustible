@@ -123,7 +123,7 @@
                 <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition">
                     Cancelar
                 </button>
-                <button type="submit" class="flex-1 px-4 py-2 bg-gradient-to-r from-primary-600 to-accent-500 text-white rounded-lg font-medium hover:shadow-lg transition">
+                <button type="submit" class="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:shadow-lg transition">
                     Guardar
                 </button>
             </div>
